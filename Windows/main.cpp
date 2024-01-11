@@ -16,7 +16,7 @@ const int WYMAGANE_RENIFERY = 9;
 const int WYMAGANE_SKRZATY = 3;
 
 mutex mtx;
-condition_variable santaCV, reindeerCV, gnomeCV;
+condition_variable santaCV, reindeerCV, gnomeCV, waitCV;
 
 int numReindeer = 0;
 int numGnomes = 0;
@@ -52,6 +52,7 @@ void watekMikolaja() {
         santaCV.wait(lock, [] { return guest==0; });
         // Mikołaj wraca spać, gdy obsłuży grupę elfów lub reniferów.
         santaIsSleeping = true;
+        waitCV.notify_one();
         cout << "Miko\210aj wraca spa\206." << endl;
     }
 }
@@ -65,6 +66,12 @@ void watekRenifera(int id) {
     numReindeer++;
     if (numReindeer == WYMAGANE_RENIFERY && santaIsSleeping) {
         santaCV.notify_one();
+        santaIsSleeping = false;
+    }
+    else if(numReindeer == WYMAGANE_RENIFERY && !santaIsSleeping)
+    {
+    	waitCV.wait(lock, [] { return santaIsSleeping; });
+    	santaCV.notify_one();
         santaIsSleeping = false;
     }
 
@@ -88,6 +95,12 @@ void watekSkrzata(int id) {
     numGnomes++;
     if (numGnomes >= WYMAGANE_SKRZATY && santaIsSleeping) {
         santaCV.notify_one();
+        santaIsSleeping = false;
+    }
+    else if(numGnomes >= WYMAGANE_SKRZATY && !santaIsSleeping)
+    {
+    	waitCV.wait(lock, [] { return santaIsSleeping; });
+    	santaCV.notify_one();
         santaIsSleeping = false;
     }
 
